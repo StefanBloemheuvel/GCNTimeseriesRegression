@@ -1,0 +1,631 @@
+#%%
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Mar 18 09:55:44 2019
+
+@author: dario
+"""
+
+
+
+
+
+import os
+import pandas as pd
+import numpy as np
+import obspy
+import xml.etree.ElementTree
+import urllib.request
+import matplotlib.pyplot as plt
+import scipy
+import json
+import h5py
+
+import tensorflow as tf
+from tensorflow.keras.callbacks import *
+from tensorflow.keras import models
+from tensorflow.keras import layers
+from tensorflow.keras import regularizers
+from tensorflow.keras import optimizers
+from tensorflow.keras import initializers
+
+from spektral.layers import GCNConv, GlobalSumPool, GlobalAvgPool, GlobalMaxPool
+from tensorflow.keras.layers import *
+from spektral.utils import gcn_filter
+
+import datetime
+
+seed = 1
+def print_time():
+    parser = datetime.datetime.now() 
+    return parser.strftime("%d-%m-%Y %H:%M:%S")
+
+# with open("mse_results.txt", "a") as text_file:
+#     print('\n', file=text_file)
+#     print(f"Date: {print_time()}","Model: Graph", file=text_file)
+
+# from keras.callbacks import CSVLogger
+# csv_logger = CSVLogger('history.txt', append=True, separator=',')
+# from graph_model import CallBacks
+
+# with open("mse_results.txt", "a") as text_file:
+#         print(f"Model: Graph", file=text_file)
+
+#%%
+def get_eqs():
+    rootDir='./prepared' 
+        
+    folder_list = [ item for item in os.listdir(rootDir) if os.path.isdir(os.path.join(rootDir, item)) ]
+    
+    return folder_list
+
+def get_stations():
+    stations = pd.read_pickle('Intro/chosenStations.pkl')
+
+    return stations
+
+    
+
+
+def other_preds(testMeta, name):
+    columnsDF = ['event_id', 'sta', 'pga', 'pgv', 'psa03',
+       'psa10', 'psa30', 'pred_pga', 'pred_psa30', 'pred_psa10', 'pred_pgv', 'pred_psa03']
+    final_table = pd.DataFrame(columns = columnsDF)
+       
+    for row in testMeta:
+        eq_id = row[0][0]
+        
+        with open('data/ShakeMap_data/' + eq_id + '/stationlist.json', 'r') as read_file:
+            data = json.load(read_file)
+        
+        for station in row[:, 1]:
+            for feature in data['features']:
+                if feature['properties']['code'] == station:
+                    try:
+                        final_table = final_table.append(fill_row(feature, eq_id), ignore_index=True)
+                    except:
+                        pass
+            
+            
+    for column in columnsDF[2:]:
+        final_table[column] = np.log10(final_table[column])
+        
+    final_table.replace(-np.inf, -7, inplace=True)
+    
+    final_table.to_csv(name)
+    
+    return final_table
+    
+
+def normalize(inputs): # Houden
+    maxes = []
+    normalized = []
+    for eq in inputs:
+        maks = np.max(np.abs(eq))
+        maxes.append(maks)
+        if maks != 0:
+            normalized.append(eq/maks)
+        else:
+            normalized.append(eq)
+#    maxes = np.reshape(np.array(maxes), (len(maxes), 1))
+    return np.array(normalized), np.array(maxes)        
+
+
+def targets_to_list(targets): # Houden
+    targets = targets.transpose(2,0,1)
+
+    targetList = []
+    for i in range(0, len(targets)):
+        targetList.append(targets[i,:,:])
+        
+    return targetList
+
+
+def populate_single_table(meta, targets, predictions, component): # houden
+    columnsDF = ['event_id', 'sta', component, 'pred_' + component]
+    final_table = pd.DataFrame(columns = columnsDF)
+    
+    for i in range(0, len(meta)):
+        if len(targets[i].shape)==1:
+            tarArray = np.reshape(targets[i], (39,1))
+            predArray = np.reshape(predictions[i], (39,1))
+    
+        stacked = np.hstack((meta[i], tarArray, predArray))
+        stacked = pd.DataFrame(stacked, columns = columnsDF)
+        final_table = pd.concat([final_table, stacked], ignore_index=True)
+    
+    final_table.to_csv('data/res/log/singlePred/' + component +'testResults.csv')
+
+    
+    return final_table
+    
+def targets_to_log(targets):   # houden
+    targets = np.log10(targets)
+    
+    targetMin = targets[targets != -np.inf].min()
+    targets[targets == -np.inf] = targetMin-1
+    
+    return targets
+
+seed = 1
+import tensorflow
+def k_fold_split(inputs, targets, meta): # houden
+    meta = np.stack(meta)
+
+    # make sure everything is seeded
+
+    import os
+    os.environ['PYTHONHASHSEED']=str(seed)
+
+    import random
+    random.seed(seed)
+
+    np.random.seed(seed)
+    np.random.permutation(seed)
+    tensorflow.random.set_seed(seed)
+
+    
+
+    p = np.random.permutation(len(targets))
+    
+    print('min of p = ',np.array(p)[50:100].min())
+    print('max of p = ',np.array(p)[50:100].max())
+    print('mean of p = ',np.array(p)[50:100].mean())
+    inputs = inputs[p]
+    targets = targets[p]
+    meta = meta[p]
+    
+    ind = int(len(inputs)/5)
+    inputsK = []
+    targetsK = []
+    metaK = []
+    for i in range(0,5-1):
+        inputsK.append(inputs[i*ind:(i+1)*ind])
+        targetsK.append(targets[i*ind:(i+1)*ind])
+        metaK.append(meta[i*ind:(i+1)*ind])
+    
+    inputsK.append(inputs[(i+1)*ind:])
+    targetsK.append(targets[(i+1)*ind:])
+    metaK.append(meta[(i+1)*ind:])    
+    
+    return inputsK, targetsK, metaK
+        
+def merge_splits(inputs, targets, meta, k): # houden
+    if k != 0:
+        z=0
+        inputsTrain = inputs[z]
+        targetsTrain = targets[z]
+        metaTrain = meta[z]
+    else:
+        z=1
+        inputsTrain = inputs[z]
+        targetsTrain = targets[z]
+        metaTrain = meta[z]
+
+    for i in range(z+1, 5):
+        if i != k:
+            inputsTrain = np.concatenate((inputsTrain, inputs[i]))
+            targetsTrain = np.concatenate((targetsTrain, targets[i]))
+            metaTrain = np.concatenate((metaTrain, meta[i]))
+    
+    return inputsTrain, targetsTrain, metaTrain, inputs[k], targets[k], meta[k]
+
+def data_to_file(meta, targets, predictions, name):
+    predictions = np.array(predictions)
+    predictions = np.transpose(predictions, (1,2,0))
+    
+    newMeta = np.concatenate((meta, targets), axis=2)
+    newMeta = np.concatenate((newMeta, predictions), axis=2)
+    
+    newMeta = newMeta.reshape((len(newMeta[:,0,0])*len(newMeta[0,:,0]), len(newMeta[0,0,:])))
+    
+    #print(newMeta.shape)
+    newMeta = pd.DataFrame(newMeta, columns=['event_id', 'sta', 'Observed', 'station','pgaUNC',
+       'pgvUNC', 'sa(0.3)UNC', 'sa(1.0)UNC', 'sa(3.0)UNC','Epicentral distance', 'Vs30', 'Magnitude', 'Depth', 'Latitude',
+       'Longitude', 'has_data','FileName', 'pga', 'pgv', 'psa03', 'psa10', 'psa30', 'pred_pga', 'pred_pgv', 'pred_psa03', 'pred_psa10','pred_psa30'])
+
+    newMeta.drop(['station'], inplace=True, axis=1)
+    
+    newMeta.to_csv(name)
+    
+    return newMeta
+
+
+def build_model(input_shape): # houden
+
+    reg_const = 0.0001
+    activation_func = 'relu'
+
+    wav_input = layers.Input(shape=input_shape, name='wav_input')
+    graph_input = layers.Input(shape=(39,39), name='graph_input')
+    graph_features = layers.Input(shape=(39,2), name='graph_features')
+
+    conv1 = layers.Conv2D(filters=32, kernel_size=(1, 125), strides=(1, 2),  activation=activation_func, kernel_regularizer=regularizers.l2(reg_const), name='conv1')(wav_input)
+    conv1 = layers.Conv2D(filters=64, kernel_size=(1, 125), strides=(1, 2),  activation=activation_func, kernel_regularizer=regularizers.l2(reg_const), name='conv2')(conv1)
+    # conv1 = layers.Conv2D(filters=64, kernel_size=(39, 5), strides=(1, 5),  activation=activation_func, padding = 'same', kernel_regularizer=regularizers.l2(reg_const), name='conv3')(conv1)
+
+    conv1_new = tf.keras.layers.Reshape((39,conv1.shape[2] * conv1.shape[3]))(conv1)    
+    conv1_new = layers.concatenate(inputs=[conv1_new, graph_features], axis=2)
+
+    conv1_new = GCNConv(64, activation='relu', use_bias=False, kernel_regularizer=regularizers.l2(reg_const))([conv1_new, graph_input])
+    conv1_new = layers.Dropout(0.4, seed=seed)(conv1_new) # was 0.3 altijd bij alle experiments
+    conv1_new = GCNConv(64, activation='tanh', use_bias=False, kernel_regularizer=regularizers.l2(reg_const))([conv1_new, graph_input])
+
+
+    conv1_new = layers.Flatten()(conv1_new)
+    conv1_new = layers.Dropout(0.4, seed=seed)(conv1_new)
+
+    meta_input = layers.Input(shape=(1,), name='meta_input')
+    meta = layers.Dense(1)(meta_input)
+    conv1_new = layers.concatenate(inputs=[conv1_new, meta])
+    # conv1_new = layers.Dropout(0.4, seed=seed)(conv1_new)
+    merged = layers.Dense(128)(conv1_new)
+
+
+    pga = layers.Dense(39)(merged)
+    pgv = layers.Dense(39)(merged)
+    sa03 = layers.Dense(39)(merged)
+    sa10 = layers.Dense(39)(merged)
+    sa30 = layers.Dense(39)(merged)
+    
+    final_model = models.Model(inputs=[wav_input, meta_input, graph_input, graph_features], outputs=[pga, pgv, sa03, sa10, sa30]) #, pgv, sa03, sa10, sa30
+    
+    rmsprop = optimizers.RMSprop(lr=0.0001, rho=0.9, epsilon=None, decay=0.)
+    # adamopt = tf.keras.optimizers.Adam(learning_rate=0.0001)
+    # final_model.compile(optimizer=rmsprop, loss='mse', metrics=['mse'])
+    final_model.compile(optimizer=rmsprop, loss='mse')#, metrics=['mse'])
+    
+    return final_model
+
+from tensorflow import keras
+class myCallback(keras.callbacks.Callback):
+    def on_epoch_end(self, epoch, logs=None):
+        if (epoch + 1) % 5 == 0:
+            # with open('history.txt', 'a') as text_file:
+                # print("For epoch {}, val_loss is {:7.4f}.".format(epoch + 1, logs["val_loss"]), file = text_file)
+                # print()
+            # print(logs['val_loss'])
+            print('val_loss of epoch ',epoch,' = ',np.round(logs['val_loss'], 4))
+        # if epoch == 1:
+            # print(logs)
+Writer = myCallback()
+
+model_checkpoint = keras.callbacks.ModelCheckpoint('models/graph_model.h5', monitor='val_loss',verbose=1, save_best_only=True)
+# model_checkpoint = keras.callbacks.ModelCheckpoint('models/graph_model.hdf5', monitor='val_loss',verbose=1, save_best_only=True)
+
+es = keras.callbacks.EarlyStopping(patience=10, verbose=1, min_delta=0.001, monitor='val_loss', mode='min',baseline=None, restore_best_weights=True)
+
+import sys
+network_choice = str(sys.argv[1])
+
+#%%
+def main():
+
+    # network_choice = 'network_2'
+
+    if network_choice == 'network_1':
+
+        
+        #inputs, targets, meta = get_data()
+        inputs = np.load('data/inputs.npy', allow_pickle = True)
+        targets = np.load('data/targets.npy', allow_pickle = True)
+        meta = np.load('data/meta.npy', allow_pickle = True)
+
+        # adjacency = np.load('data/adjacency.npy', allow_pickle=True)     
+        minmaxchecker = True
+        if minmaxchecker == True:   
+            graph_input = np.load('data/minmax_normalized_laplacian.npy', allow_pickle=True)
+        else:
+            graph_input = np.load('data/normalized_laplacian.npy', allow_pickle=True)
+        
+
+        graph_input = np.array([graph_input] * inputs.shape[0])
+
+        graph_features = np.load('data/station_coords.npy', allow_pickle=True)
+
+        test_zeros = False
+        if test_zeros == True:
+            graph_features = np.zeros((39,2))
+
+        # test_rescale = True
+        # if test_rescale == True:
+        #     graph_features[:,0] = np.interp(graph_features[:,0], (graph_features[:,0].min(), graph_features[:,0].max()), (0, 1))
+        #     graph_features[:,1] = np.interp(graph_features[:,1], (graph_features[:,1].min(), graph_features[:,1].max()), (0, 1))
+
+        print(graph_features[0])
+
+        graph_features = np.array([graph_features] * inputs.shape[0])
+    else:
+
+
+        #inputs, targets, meta = get_data()
+        inputs = np.load('data/othernetwork/inputs.npy', allow_pickle = True)[0:265]
+        targets = np.load('data/othernetwork/targets.npy', allow_pickle = True)[0:265]
+        meta = np.load('data/othernetwork/altered_meta.npy', allow_pickle = True)[0:265]
+
+        # graph_input = np.load('data/othernetwork/normalized_laplacian.npy', allow_pickle=True)
+
+        minmaxchecker = True
+        if minmaxchecker == True:   
+            graph_input = np.load('data/othernetwork/minmax_normalized_laplacian.npy', allow_pickle=True)
+        else:
+            graph_input = np.load('data/othernetwork/normalized_laplacian.npy', allow_pickle=True)
+        
+        # graph_input = gcn_filter(graph_input)
+        graph_input = np.array([graph_input] * inputs.shape[0])
+
+        graph_features = np.load('data/othernetwork/station_coords.npy', allow_pickle=True)
+        # import sklearn.preprocessing.minmax_scale
+        # np.interp(graph_features, (graph_features.min(), graph_features.max()), (0, 1))
+
+        test_zeros = False
+        if test_zeros == True:
+            graph_features = np.zeros((39,2))
+
+        # test_rescale = True
+        # if test_rescale == True:
+            # graph_features[:,0] = np.interp(graph_features[:,0], (graph_features[:,0].min(), graph_features[:,0].max()), (0, 1))
+            # graph_features[:,1] = np.interp(graph_features[:,1], (graph_features[:,1].min(), graph_features[:,1].max()), (0, 1))
+
+        print(graph_features[0])
+        graph_features = np.array([graph_features] * inputs.shape[0])
+
+        # meta = pd.DataFrame(meta[0])
+        # meta.columns = ['EventID', 'station', 'Observed', 'Epicentral distance', 'Vs30', 'Magnitude', 'Depth', 'Latitude', 'Longitude',  'pga', 'pgv', 'sa(0.3)', 'sa(1.0)', 'sa(3.0)', 'Has data', 'FileName']
+        # meta['stationID'] = meta['station']
+        # meta = meta[['EventID', 'station', 'Observed', 'stationID', 'pga', 'pgv', 'sa(0.3)', 'sa(1.0)', 'sa(3.0)', 'Epicentral distance', 'Vs30', 'Magnitude', 'Depth', 'Latitude', 'Longitude', 'Has data', 'FileName']]
+        # meta = meta.values
+
+    import math
+    length_size_min = inputs.shape[0] / 5
+    print(f"size of length_size_min = {length_size_min}")
+    length_size_min = math.floor(length_size_min)
+    print(f"size of length_size_min = {length_size_min}")
+
+    length_size_max = inputs.shape[0] -(inputs.shape[0] / 5)
+    print(f"size of length_size_max = {length_size_max}")
+    length_size_max = math.floor(length_size_max)
+    print(f"size of length_size_max = {length_size_max}")
+
+    # length_size_min = int(inputs.shape[0] / 5 )
+    # length_size_max = math.floor(inputs.shape[0] - length_size_min)
+
+    # length_size_max = int(inputs.shape[0] - length_size_min)
+    print('start of all shapes to print:')
+    print(inputs.shape[0] / 5)
+    print(inputs.shape[0] - (inputs.shape[0] / 5))
+    print(length_size_min)
+    print(length_size_max)
+    print(inputs.shape)
+    print(targets.shape)
+    print(meta.shape)
+    print(graph_input.shape)
+    print(graph_features.shape)
+    #noise_data, noise_targets, noise_meta = get_noise_data('noise/')
+    #noise_data, noise_maxes = normalize(noise_data)
+    
+    #targets = targets_to_log(targets)
+
+#    targets = targets.transpose(0, 2, 1)
+    #trainInputsAll, trainTargets, trainMeta, testInputsAll, testTargets, testMeta = split_to_sets(inputs, targets, meta)
+
+    inputsK, targetsK, metaK = k_fold_split(inputs, targets, meta)
+    
+    mse_scores_pgv = []
+    mse_scores_pga = []
+    mse_scores_psa_03s = []
+    mse_scores_psa_1s = []
+    mse_scores_psa_3s = []
+    
+
+    history_final = pd.DataFrame(columns = ['k','mse_pgv','mse_pga',   'loss' , 'dense_2_loss' , 'dense_3_loss',  'dense_4_loss'  ,'dense_5_loss' , 'dense_6_loss'  , 'val_loss',  'val_dense_2_loss',  'val_dense_3_loss',  'val_dense_4_loss',  'val_dense_5_loss',  'val_dense_6_loss'])
+
+    for k in range(0,5):
+        keras.backend.clear_session()
+        tf.keras.backend.clear_session()
+
+        trainInputsAll, trainTargets, trainMeta, testInputsAll, testTargets, testMeta = merge_splits(inputsK, targetsK, metaK, k)
+    
+        # if network_choice == 'network_1':
+        train_graphinput = graph_input[0:length_size_max,:,:]
+        train_graphfeatureinput = graph_features[0:length_size_max,:,:]
+
+        test_graphinput = graph_input[0:length_size_min,:,:]
+        test_graphfeatureinput = graph_features[0:length_size_min,:,:]
+
+        # else:
+        #     train_graphinput = graph_input[0:732,:,:]
+        #     train_graphfeatureinput = graph_features[0:732,:,:]
+
+        #     test_graphinput = graph_input[0:183,:,:]
+        #     test_graphfeatureinput = graph_features[0:183,:,:]
+        # stat_dists = pd.read_pickle('distTo1stStation.pkl')
+            
+        # trainDists = populate_array(np.array(stat_dists), len(trainInputsAll))
+        # testDists = populate_array(np.array(stat_dists), len(testInputsAll))
+        if network_choice == 'network_1':
+            trainInputs, trainMaxes = normalize(trainInputsAll[:, :, :1000, :])
+            testInputs, testMaxes = normalize(testInputsAll[:, :, :1000, :])
+    
+        else:
+            trainInputs, trainMaxes = normalize(trainInputsAll[:, :, :, :])
+            testInputs, testMaxes = normalize(testInputsAll[:, :, :, :])
+        # # append trainMaxes to the graph features array as an extra variable on the 3rd dimension
+        # train_graphfeatureinput = np.concatenate((train_graphfeatureinput, 
+        #             np.broadcast_to(np.array(trainMaxes)[:, None, None], train_graphfeatureinput.shape[:-1] + (1,))), 
+        #            axis = -1)
+
+        # # append testMaxes to the graph features array as an extra variable on the 3rd dimension
+        # test_graphfeatureinput = np.concatenate((test_graphfeatureinput, 
+        #             np.broadcast_to(np.array(testMaxes)[:, None, None], test_graphfeatureinput.shape[:-1] + (1,))), 
+        #            axis = -1)
+
+        model = build_model(testInputs[0].shape)
+        new_weights = np.array(model.get_weights()[0])
+        # print(f"before training: mean weights are {new_weights.mean()}, min  = {new_weights.min()} and max = {new_weights.max()}")
+
+        # epochs = 100
+        # batch_size= 30
+
+        # print('round two of all prints:')
+        # print(trainInputs.shape)
+        # print(trainMaxes.shape)
+        # print(train_graphinput.shape)
+        # print(train_graphfeatureinput.shape)
+        # print(trainTargets.shape)
+        # print()
+
+        # print(testInputs.shape)
+        # print(testMaxes.shape)
+        # print(test_graphinput.shape)
+        # print(test_graphfeatureinput.shape)
+        # print(testTargets.shape)
+
+        iteration_checkpoint = keras.callbacks.ModelCheckpoint(
+            f'models/graph_model_{network_choice}_iteration_{k}.h5',
+            monitor='val_loss',
+            verbose=1,
+            save_best_only=True
+        )
+
+        # epochs = 100, batch_size=30
+        print(model.summary())
+        history = model.fit(x=[trainInputs, trainMaxes, train_graphinput,train_graphfeatureinput], 
+                            y=targets_to_list(trainTargets),#trainTargets[:,:,0],
+              epochs=100, batch_size=30,
+            #   epochs=30, batch_size=5,
+              validation_data=([testInputs, testMaxes,test_graphinput,test_graphfeatureinput], targets_to_list(testTargets)),verbose=0,callbacks=[es,iteration_checkpoint])#
+       
+        new_weights = np.array(model.get_weights()[0])
+        # print(f"after training: mean weights are {new_weights.mean()}, min  = {new_weights.min()} and max = {new_weights.max()}")
+        # print(new_weights.mean())
+        # print(new_weights.min())
+        # print(new_weights.max())
+        # model = keras.models.load_model('models/graph_model.hdf5')
+        # model.load_weights('models/graph_model.h5')
+        # model.load_weights('models/graph_model.h5')
+
+        print()
+        print(f"total parameters in this model: {model.count_params():,.2f}")
+        print('total number of epochs ran = ',len(history.history['loss']))
+        print('Fold number:' + str(k))
+        print('Loss: ',history.history['loss'][-1])
+        print('val_loss: ',history.history['val_loss'][-1])
+
+        predictions = model.predict([testInputs, testMaxes, test_graphinput, test_graphfeatureinput])
+        print(f"The shape of the predictions = {np.array(predictions).shape}")
+        np.save(f'data/gcn_testtargets_{network_choice}.npy', testTargets)
+        # np.save('data/gcn_predictions.npy', predictions)
+        np.save(f'data/gcn_predictions_{network_choice}.npy', predictions)
+
+        np.save(f'data/boxplots/gcn_predictions_{network_choice}_{k}.npy', predictions)
+        np.save(f'data/boxplots/gcn_testtargets_{network_choice}_{k}.npy', testTargets)
+
+
+
+        np.save(f'data/gcn_testmeta_{network_choice}.npy', testMeta)
+        # print('prediction shape: ',np.array(predictions).shape)
+        fileName = 'data/res/SManalysis/kFoldML' + str(k) + '.csv'
+        fileNameGMPE = 'data/res/SManalysis/kFoldGMPE' + str(k) + '.csv'
+        
+        #other_preds(testMeta, fileNameGMPE)
+
+        print('MSE of this fold = ',np.square(np.subtract(predictions[1], testTargets[:,:,1])).mean())
+
+        # print('\x1b[0;39;43m' + f'MSE of this fold2 = {np.square(np.subtract(predictions[1], testTargets[:,:,1])).mean()}' + '\x1b[0m')
+        #print(testMeta.shape)
+        #print(testTargets.shape)
+        #print(np.array(predictions).shape)
+    
+        data_to_file(testMeta, testTargets, predictions, fileName)
+
+        mse_scores_pga.append(np.round(np.square(np.subtract(np.array(predictions)[0,:,:], testTargets[:,:,0])).mean(), 4))
+        mse_scores_pgv.append(np.round(np.square(np.subtract(predictions[1], testTargets[:,:,1])).mean(), 4))
+
+        mse_scores_psa_03s.append(np.round(np.square(np.subtract(predictions[2], testTargets[:,:,2])).mean(), 4))
+        mse_scores_psa_1s.append(np.round(np.square(np.subtract(predictions[3], testTargets[:,:,3])).mean(), 4))
+        mse_scores_psa_3s.append(np.round(np.square(np.subtract(predictions[4], testTargets[:,:,4])).mean(), 4))
+        # mse_scores_5.append(np.round(np.square(np.subtract(predictions[5], testTargets[:,:,5])).mean(), 4))
+
+
+        print()  
+
+        plt.figure()
+        plt.plot(history.history['loss'][1:])
+        plt.plot(history.history['val_loss'][1:])
+        plt.title('model train vs validation loss')
+        plt.ylabel('loss')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'validation'], loc='upper right')
+        plt.savefig(f'plots/gcn_losses{k}.png', bbox_inches='tight')
+
+        hist_df = pd.DataFrame(history.history) 
+        hist_df.insert(0, 'k',k)
+        hist_df.insert(1,'mse_pgv',np.round(np.square(np.subtract(predictions[1], testTargets[:,:,1])).mean(), 4))
+        hist_df.insert(1,'mse_pga',np.round(np.square(np.subtract(np.array(predictions)[0,:,:], testTargets[:,:,0])).mean(), 4))
+
+        history_final = pd.concat([history_final, hist_df])
+        # print(hist_df.head(2))
+        
+        keras.backend.clear_session()
+        tf.keras.backend.clear_session()
+
+
+    # print(history_final.head(10))
+
+    history_final.to_csv('models/gcn_results.csv', index=None)
+    
+
+    plt.figure(figsize=(10,10))
+    plt.scatter(testTargets[:,:,1], predictions[1], zorder=10, s=3)
+    plt.title('Predicted vs observed log(PGV)', fontsize=20)
+    plt.xlim(-6, -1)   
+    plt.ylim(-6, -2)
+    plt.ylabel('predicted')
+    plt.xlabel('observed')
+
+    plt.grid(True, linestyle='-', linewidth=0.5)
+    plt.savefig('plots/gcn_PGV.png', bbox_inches='tight')
+    # plt.show()
+    
+    plt.figure(figsize=(10,10))
+    plt.scatter(testTargets[:,:,0], np.array(predictions)[0,:,:], zorder=10, s=3)
+
+    plt.title('Predicted vs observed log(PGA) - 10 sec', fontsize=26)
+    plt.ylabel('predicted', fontsize=20)
+    plt.xlabel('observed', fontsize=20)
+    plt.xlim(-6, 1)   
+    plt.ylim(-6, 1)
+    plt.grid(True, linestyle='-', linewidth=0.5)
+    plt.savefig('plots/gcn_PGA.png', bbox_inches='tight')
+    # plt.show()
+
+
+
+    mean_pgv = np.array(mse_scores_pgv).mean()
+    mean_pga = np.array(mse_scores_pga).mean()
+    mean_psa_03s = np.array(mse_scores_psa_03s).mean()
+    mean_psa_1s = np.array(mse_scores_psa_1s).mean()
+    mean_psa_3s = np.array(mse_scores_psa_3s).mean()
+    # mean_5 = str(np.array(mse_scores_5).mean())
+
+    all_scores = str(np.array([mean_pgv,mean_pga,mean_psa_03s,mean_psa_1s,mean_psa_3s]).mean())
+
+    with open("mse_results.csv", "a") as text_file:
+        print(print_time() + ',' +'Graph'+ ',' + network_choice + ',' + str(mean_pgv) + ',' + str(mean_pga) + ',' + str(mean_psa_03s) + ',' + str(mean_psa_1s) + ',' + str(mean_psa_3s)  + ',' + str(all_scores) , file=text_file)
+
+
+    # with open("mse_results.csv", "a") as text_file:
+        # print(print_time() + ',' +'Graph'+ ',' + network_choice + ',' + str(np.array(mse_scores_pgv).mean()) + ',' + str(np.array(mse_scores_pga).mean()) + ',' + str(np.array(mse_scores_pga + mse_scores_pgv).mean()) , file=text_file)
+
+
+
+if __name__== "__main__" :
+    main()
+
+# %%
+
+
+# saving a zip from here
+# zip -r boxplots.zip boxplots/
