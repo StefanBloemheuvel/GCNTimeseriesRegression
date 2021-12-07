@@ -124,9 +124,8 @@ def build_model(input_shape): # houden
     graph_input = layers.Input(shape=(39,39), name='graph_input')
     graph_features = layers.Input(shape=(39,2), name='graph_features')
 
-    conv1 = layers.Conv2D(filters=32, kernel_size=(1, 125), strides=(1, 2),  activation=activation_func, kernel_regularizer=regularizers.l2(reg_const), name='conv1')(wav_input)
-    conv1 = layers.Conv2D(filters=64, kernel_size=(1, 125), strides=(1, 2),  activation=activation_func, kernel_regularizer=regularizers.l2(reg_const), name='conv2')(conv1)
-    # conv1 = layers.Conv2D(filters=64, kernel_size=(39, 5), strides=(1, 5),  activation=activation_func, padding = 'same', kernel_regularizer=regularizers.l2(reg_const), name='conv3')(conv1)
+    conv1 = layers.Conv1D(filters=32, kernel_size=125, strides=2,  activation=activation_func, kernel_regularizer=regularizers.l2(reg_const), name='conv1')(wav_input)
+    conv1 = layers.Conv1D(filters=64, kernel_size=125, strides=2,  activation=activation_func, kernel_regularizer=regularizers.l2(reg_const), name='conv2')(conv1)
 
     conv1_new = tf.keras.layers.Reshape((39,conv1.shape[2] * conv1.shape[3]))(conv1)    
     conv1_new = layers.concatenate(inputs=[conv1_new, graph_features], axis=2)
