@@ -1,12 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
-import obspy
-import xml.etree.ElementTree
-import urllib.request
 import matplotlib.pyplot as plt
-import scipy
-import json
 import h5py
 
 import tensorflow as tf
@@ -17,7 +12,7 @@ from tensorflow.keras import regularizers
 from tensorflow.keras import optimizers
 from tensorflow.keras import initializers
 
-from spektral.layers import GCNConv, GlobalSumPool, GlobalAvgPool, GlobalMaxPool
+from spektral.layers import GCNConv
 from tensorflow.keras.layers import *
 from spektral.utils import gcn_filter
 
@@ -58,19 +53,14 @@ def k_fold_split(inputs, targets, meta): # houden
     meta = np.stack(meta)
 
     # make sure everything is seeded
-
     import os
     os.environ['PYTHONHASHSEED']=str(seed)
-
     import random
     random.seed(seed)
-
     np.random.seed(seed)
     np.random.permutation(seed)
     tensorflow.random.set_seed(seed)
-
     
-
     p = np.random.permutation(len(targets))
     
     print('min of p = ',np.array(p)[50:100].min())
@@ -134,7 +124,6 @@ def build_model(input_shape): # houden
     conv1_new = layers.Dropout(0.4, seed=seed)(conv1_new) # was 0.3 altijd bij alle experiments
     conv1_new = GCNConv(64, activation='tanh', use_bias=False, kernel_regularizer=regularizers.l2(reg_const))([conv1_new, graph_input])
 
-
     conv1_new = layers.Flatten()(conv1_new)
     conv1_new = layers.Dropout(0.4, seed=seed)(conv1_new)
 
@@ -143,7 +132,6 @@ def build_model(input_shape): # houden
     conv1_new = layers.concatenate(inputs=[conv1_new, meta])
     # conv1_new = layers.Dropout(0.4, seed=seed)(conv1_new)
     merged = layers.Dense(128)(conv1_new)
-
 
     pga = layers.Dense(39)(merged)
     pgv = layers.Dense(39)(merged)
@@ -154,27 +142,11 @@ def build_model(input_shape): # houden
     final_model = models.Model(inputs=[wav_input, meta_input, graph_input, graph_features], outputs=[pga, pgv, sa03, sa10, sa30]) #, pgv, sa03, sa10, sa30
     
     rmsprop = optimizers.RMSprop(lr=0.0001, rho=0.9, epsilon=None, decay=0.)
-    # adamopt = tf.keras.optimizers.Adam(learning_rate=0.0001)
-    # final_model.compile(optimizer=rmsprop, loss='mse', metrics=['mse'])
-    final_model.compile(optimizer=rmsprop, loss='mse')#, metrics=['mse'])
+    final_model.compile(optimizer=rmsprop, loss='mse')
     
     return final_model
 
 from tensorflow import keras
-class myCallback(keras.callbacks.Callback):
-    def on_epoch_end(self, epoch, logs=None):
-        if (epoch + 1) % 5 == 0:
-            # with open('history.txt', 'a') as text_file:
-                # print("For epoch {}, val_loss is {:7.4f}.".format(epoch + 1, logs["val_loss"]), file = text_file)
-                # print()
-            # print(logs['val_loss'])
-            print('val_loss of epoch ',epoch,' = ',np.round(logs['val_loss'], 4))
-        # if epoch == 1:
-            # print(logs)
-Writer = myCallback()
-
-model_checkpoint = keras.callbacks.ModelCheckpoint('models/graph_model.h5', monitor='val_loss',verbose=1, save_best_only=True)
-# model_checkpoint = keras.callbacks.ModelCheckpoint('models/graph_model.hdf5', monitor='val_loss',verbose=1, save_best_only=True)
 
 es = keras.callbacks.EarlyStopping(patience=10, verbose=1, min_delta=0.001, monitor='val_loss', mode='min',baseline=None, restore_best_weights=True)
 
@@ -198,15 +170,11 @@ def main():
         else:
             graph_input = np.load('data/normalized_laplacian.npy', allow_pickle=True)
         
-
         graph_input = np.array([graph_input] * inputs.shape[0])
 
         graph_features = np.load('data/station_coords_ci.npy', allow_pickle=True)
         graph_features = np.array([graph_features] * inputs.shape[0])
     else:
-
-
-        #inputs, targets, meta = get_data()
         inputs = np.load('data/othernetwork/inputs_cw.npy', allow_pickle = True)[0:265]
         targets = np.load('data/othernetwork/targets_cw.npy', allow_pickle = True)[0:265]
         meta = np.load('data/othernetwork/altered_meta_cw.npy', allow_pickle = True)[0:265]
@@ -243,22 +211,17 @@ def main():
     mse_scores_psa_1s = []
     mse_scores_psa_3s = []
     
-
-    history_final = pd.DataFrame(columns = ['k','mse_pgv','mse_pga',   'loss' , 'dense_2_loss' , 'dense_3_loss',  'dense_4_loss'  ,'dense_5_loss' , 'dense_6_loss'  , 'val_loss',  'val_dense_2_loss',  'val_dense_3_loss',  'val_dense_4_loss',  'val_dense_5_loss',  'val_dense_6_loss'])
-
     for k in range(0,5):
         keras.backend.clear_session()
         tf.keras.backend.clear_session()
 
         trainInputsAll, trainTargets, trainMeta, testInputsAll, testTargets, testMeta = merge_splits(inputsK, targetsK, metaK, k)
     
-
         train_graphinput = graph_input[0:length_size_max,:,:]
         train_graphfeatureinput = graph_features[0:length_size_max,:,:]
 
         test_graphinput = graph_input[0:length_size_min,:,:]
         test_graphfeatureinput = graph_features[0:length_size_min,:,:]
-
 
         if network_choice == 'network_1':
             trainInputs, trainMaxes = normalize(trainInputsAll[:, :, :1000, :])
@@ -276,7 +239,6 @@ def main():
             verbose=1,
             save_best_only=True
         )
-
 
         print(model.summary())
         history = model.fit(x=[trainInputs, trainMaxes, train_graphinput,train_graphfeatureinput], 
@@ -302,10 +264,6 @@ def main():
         np.save(f'data/boxplots/gcn_testtargets_{network_choice}_{k}.npy', testTargets)
         np.save(f'data/gcn_testmeta_{network_choice}.npy', testMeta)
 
-        fileName = 'data/res/SManalysis/kFoldML' + str(k) + '.csv'
-        fileNameGMPE = 'data/res/SManalysis/kFoldGMPE' + str(k) + '.csv'
-
-
         print('MSE of this fold = ',np.square(np.subtract(predictions[1], testTargets[:,:,1])).mean())
 
         mse_scores_pga.append(np.round(np.square(np.subtract(np.array(predictions)[0,:,:], testTargets[:,:,0])).mean(), 4))
@@ -314,19 +272,9 @@ def main():
         mse_scores_psa_03s.append(np.round(np.square(np.subtract(predictions[2], testTargets[:,:,2])).mean(), 4))
         mse_scores_psa_1s.append(np.round(np.square(np.subtract(predictions[3], testTargets[:,:,3])).mean(), 4))
         mse_scores_psa_3s.append(np.round(np.square(np.subtract(predictions[4], testTargets[:,:,4])).mean(), 4))
-
-        hist_df = pd.DataFrame(history.history) 
-        hist_df.insert(0, 'k',k)
-        hist_df.insert(1,'mse_pgv',np.round(np.square(np.subtract(predictions[1], testTargets[:,:,1])).mean(), 4))
-        hist_df.insert(1,'mse_pga',np.round(np.square(np.subtract(np.array(predictions)[0,:,:], testTargets[:,:,0])).mean(), 4))
-
-        history_final = pd.concat([history_final, hist_df])
         
         keras.backend.clear_session()
         tf.keras.backend.clear_session()
-
-    history_final.to_csv('models/gcn_results.csv', index=None)
-
 
     mean_pgv = np.array(mse_scores_pgv).mean()
     mean_pga = np.array(mse_scores_pga).mean()
