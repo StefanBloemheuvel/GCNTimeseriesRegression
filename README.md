@@ -6,5 +6,14 @@
 
 The code of the GCN can be executed by running main.py. <br /> 
 The data (too big to host on github itself) can be downloaden at: https://zenodo.org/record/5767221  <br /> 
-In the data folder, the input_ci.npy file should be placed <br /> 
-The input_cw.npy file should be place in data/othernetwork
+In the data folder, the input_ci.npy file should be placed  <br /> 
+The input_cw.npy file should be place in data/othernetwork <br /> 
+
+--------------------------
+
+#### Requirements
+Tensorflow <br /> 
+Spektral <br /> 
+Networkx <br /> 
+
+
