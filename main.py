@@ -188,38 +188,38 @@ def main():
 
     if network_choice == 'network_1':
         
-        inputs = np.load('data/inputs.npy', allow_pickle = True)
-        targets = np.load('data/targets.npy', allow_pickle = True)
-        meta = np.load('data/meta.npy', allow_pickle = True)
+        inputs = np.load('data/inputs_ci.npy', allow_pickle = True)
+        targets = np.load('data/targets_ci.npy', allow_pickle = True)
+        meta = np.load('data/meta_ci.npy', allow_pickle = True)
      
         minmaxchecker = True
         if minmaxchecker == True:   
-            graph_input = np.load('data/minmax_normalized_laplacian.npy', allow_pickle=True)
+            graph_input = np.load('data/minmax_normalized_laplacian_ci.npy', allow_pickle=True)
         else:
             graph_input = np.load('data/normalized_laplacian.npy', allow_pickle=True)
         
 
         graph_input = np.array([graph_input] * inputs.shape[0])
 
-        graph_features = np.load('data/station_coords.npy', allow_pickle=True)
+        graph_features = np.load('data/station_coords_ci.npy', allow_pickle=True)
         graph_features = np.array([graph_features] * inputs.shape[0])
     else:
 
 
         #inputs, targets, meta = get_data()
-        inputs = np.load('data/othernetwork/inputs.npy', allow_pickle = True)[0:265]
-        targets = np.load('data/othernetwork/targets.npy', allow_pickle = True)[0:265]
-        meta = np.load('data/othernetwork/altered_meta.npy', allow_pickle = True)[0:265]
+        inputs = np.load('data/othernetwork/inputs_cw.npy', allow_pickle = True)[0:265]
+        targets = np.load('data/othernetwork/targets_cw.npy', allow_pickle = True)[0:265]
+        meta = np.load('data/othernetwork/altered_meta_cw.npy', allow_pickle = True)[0:265]
 
         minmaxchecker = True
         if minmaxchecker == True:   
-            graph_input = np.load('data/othernetwork/minmax_normalized_laplacian.npy', allow_pickle=True)
+            graph_input = np.load('data/othernetwork/minmax_normalized_laplacian_cw.npy', allow_pickle=True)
         else:
             graph_input = np.load('data/othernetwork/normalized_laplacian.npy', allow_pickle=True)
         
         graph_input = np.array([graph_input] * inputs.shape[0])
 
-        graph_features = np.load('data/othernetwork/station_coords.npy', allow_pickle=True)
+        graph_features = np.load('data/othernetwork/station_coords_cw.npy', allow_pickle=True)
  
         print(graph_features[0])
         graph_features = np.array([graph_features] * inputs.shape[0])
