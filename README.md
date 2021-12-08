@@ -16,4 +16,6 @@ Tensorflow <br />
 Spektral <br /> 
 Networkx <br /> 
 
+#### How to run
 
+Type python main.py 'network_1' or 'network_2'.
