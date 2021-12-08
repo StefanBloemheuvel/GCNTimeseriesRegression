@@ -18,4 +18,4 @@ Networkx <br />
 
 #### How to run
 
-Type python main.py 'network_1' or 'network_2'.
+Run either main_cnn.py or main_gcn.py with the sys argument 'network_1' or 'network_2' in terminal.
