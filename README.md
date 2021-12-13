@@ -22,7 +22,4 @@ Run either main_cnn.py or main_gcn.py with the sys argument 'network_1' or 'netw
 
 If you want to also see how the graph is generated, graph_maker.py could be run as well. <br /> 
 
-<div align="center">
-<img src=gnn_block.png" >
-<p>Perfectly balanced</p>
-</div>
+
