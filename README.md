@@ -21,3 +21,5 @@ Networkx <br />
 Run either main_cnn.py or main_gcn.py with the sys argument 'network_1' or 'network_2' in terminal.<br /> 
 
 If you want to also see how the graph is generated, graph_maker.py could be run as well. <br /> 
+
+![](<gnn_block.png>)
