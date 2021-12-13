@@ -1,6 +1,6 @@
 ## Code for the paper: Multivariate Time Series Regression with Graph Neural Networks
 
-### Authors: Stefan Bloemheuvel, Jurgen van denHoogen, Dario Jozinovi, Alberto Michelini and Martin Atzmueller
+### Authors: Stefan Bloemheuvel, Jurgen van den Hoogen, Dario Jozinovi, Alberto Michelini and Martin Atzmueller
 
 ### This is the anonymized page that will be freely assessible in the future.
 
