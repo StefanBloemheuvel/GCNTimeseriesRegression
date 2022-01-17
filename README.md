@@ -26,3 +26,5 @@ If you want to also see how the graph is generated, graph_maker.py could be run 
  <p align="center">
     <img src="gnn_block">
  </p>
+
+![imaged](gnn_block)
