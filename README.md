@@ -8,8 +8,8 @@
 
 #### Data
 The data (too big to host on github itself) can be downloaden at: https://zenodo.org/record/5767221  <br /> 
-In the data folder, the input_ci.npy file should be placed and renamed to inputs.npy <br /> 
-The input_cw.npy file should be place in data/othernetwork  and also renamed to inputs.npy <br /> 
+In the data folder, the input_ci.npy file should be placed <br /> 
+The input_cw.npy file should be placed in data/othernetwork <br /> 
 
 #### Requirements
 Tensorflow <br /> 
