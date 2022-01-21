@@ -160,7 +160,7 @@ def main():
 
     if network_choice == 'network_1':
         
-        inputs = np.load('data/inputs.npy', allow_pickle = True)
+        inputs = np.load('data/inputs_ci.npy', allow_pickle = True)
         targets = np.load('data/targets.npy', allow_pickle = True)
         meta = np.load('data/meta.npy', allow_pickle = True)
      
@@ -174,8 +174,8 @@ def main():
 
         graph_features = np.load('data/station_coords.npy', allow_pickle=True)
         graph_features = np.array([graph_features] * inputs.shape[0])
-    else:
-        inputs = np.load('data/othernetwork/inputs.npy', allow_pickle = True)[0:265]
+    if network_choice == 'network_2':
+        inputs = np.load('data/othernetwork/inputs_cw.npy', allow_pickle = True)[0:265]
         targets = np.load('data/othernetwork/targets.npy', allow_pickle = True)[0:265]
         meta = np.load('data/othernetwork/meta.npy', allow_pickle = True)[0:265]
 
@@ -227,7 +227,7 @@ def main():
             trainInputs, trainMaxes = normalize(trainInputsAll[:, :, :1000, :])
             testInputs, testMaxes = normalize(testInputsAll[:, :, :1000, :])
     
-        else:
+        if network_choice == 'network_2':
             trainInputs, trainMaxes = normalize(trainInputsAll[:, :, :, :])
             testInputs, testMaxes = normalize(testInputsAll[:, :, :, :])
 
