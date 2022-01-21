@@ -177,7 +177,7 @@ def main():
     else:
         inputs = np.load('data/othernetwork/inputs.npy', allow_pickle = True)[0:265]
         targets = np.load('data/othernetwork/targets.npy', allow_pickle = True)[0:265]
-        meta = np.load('data/othernetwork/altered_meta.npy', allow_pickle = True)[0:265]
+        meta = np.load('data/othernetwork/meta.npy', allow_pickle = True)[0:265]
 
         minmaxchecker = True
         if minmaxchecker == True:   
