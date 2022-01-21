@@ -157,7 +157,7 @@ network_choice = str(sys.argv[1])
 def main():
 
     if network_choice == 'network_1':
-        inputs = np.load('data/inputs.npy', allow_pickle = True)
+        inputs = np.load('data/inputs_ci.npy', allow_pickle = True)
         targets = np.load('data/targets.npy', allow_pickle = True)
         meta = np.load('data/meta.npy', allow_pickle = True)
 
@@ -165,11 +165,11 @@ def main():
         graph_features = np.array([graph_features] * inputs.shape[0])
         print(graph_features.shape)
         print(graph_features)
-    else:
+    if network_choice == 'network_2':
         
-        inputs = np.load('data/othernetwork/inputs.npy', allow_pickle = True)[0:265]
+        inputs = np.load('data/othernetwork/inputs_cw.npy', allow_pickle = True)[0:265]
         targets = np.load('data/othernetwork/targets.npy', allow_pickle = True)[0:265]
-        meta = np.load('data/othernetwork/altered_meta.npy', allow_pickle = True)[0:265]
+        meta = np.load('data/othernetwork/meta.npy', allow_pickle = True)[0:265]
 
         graph_features = np.load('data/othernetwork/station_coords.npy', allow_pickle=True)
         graph_features = np.array([graph_features] * inputs.shape[0])
