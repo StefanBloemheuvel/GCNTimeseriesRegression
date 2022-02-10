@@ -258,11 +258,11 @@ def main():
         predictions = model.predict([testInputs, testMaxes, test_graphinput, test_graphfeatureinput])
         print(f"The shape of the predictions = {np.array(predictions).shape}")
         
-        np.save(f'data/gcn_testtargets_{network_choice}.npy', testTargets)
-        np.save(f'data/gcn_predictions_{network_choice}.npy', predictions)
-        np.save(f'data/boxplots/gcn_predictions_{network_choice}_{k}.npy', predictions)
-        np.save(f'data/boxplots/gcn_testtargets_{network_choice}_{k}.npy', testTargets)
-        np.save(f'data/gcn_testmeta_{network_choice}.npy', testMeta)
+#         np.save(f'data/gcn_testtargets_{network_choice}.npy', testTargets)
+#         np.save(f'data/gcn_predictions_{network_choice}.npy', predictions)
+#         np.save(f'data/boxplots/gcn_predictions_{network_choice}_{k}.npy', predictions)
+#         np.save(f'data/boxplots/gcn_testtargets_{network_choice}_{k}.npy', testTargets)
+#         np.save(f'data/gcn_testmeta_{network_choice}.npy', testMeta)
 
         print('MSE of this fold = ',np.square(np.subtract(predictions[1], testTargets[:,:,1])).mean())
 
