@@ -235,14 +235,14 @@ def main():
 
 
         predictions = model.predict([testInputs, testMaxes,test_graphfeatureinput])
-        np.save(f'data/cnn_testtargets_{network_choice}.npy', testTargets)
-        np.save(f'data/cnn_predictions_{network_choice}.npy', predictions)
+#         np.save(f'data/cnn_testtargets_{network_choice}.npy', testTargets)
+#         np.save(f'data/cnn_predictions_{network_choice}.npy', predictions)
 
-        np.save(f'data/boxplots/cnn_predictions_{network_choice}_{k}.npy', predictions)
-        np.save(f'data/boxplots/cnn_testtargets_{network_choice}_{k}.npy', testTargets)
+#         np.save(f'data/boxplots/cnn_predictions_{network_choice}_{k}.npy', predictions)
+#         np.save(f'data/boxplots/cnn_testtargets_{network_choice}_{k}.npy', testTargets)
 
 
-        np.save(f'data/cnn_testmeta_{network_choice}.npy', testMeta)
+#         np.save(f'data/cnn_testmeta_{network_choice}.npy', testMeta)
 
         fileName = 'data/res/SManalysis/kFoldML' + str(k) + '.csv'
         fileNameGMPE = 'data/res/SManalysis/kFoldGMPE' + str(k) + '.csv'
