@@ -1,8 +1,10 @@
+#%%
 import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import h5py
+import random
 
 import tensorflow as tf
 from tensorflow.keras.callbacks import *
@@ -15,7 +17,7 @@ from tensorflow.keras import initializers
 from spektral.layers import GCNConv
 from tensorflow.keras.layers import *
 from spektral.utils import gcn_filter
-
+from sklearn.model_selection import train_test_split
 import datetime
 
 seed = 1
@@ -113,6 +115,7 @@ def build_model(input_shape): # houden
     wav_input = layers.Input(shape=input_shape, name='wav_input')
     graph_input = layers.Input(shape=(39,39), name='graph_input')
     graph_features = layers.Input(shape=(39,2), name='graph_features')
+    meta_input = layers.Input(shape=(1,), name='meta_input')
 
     conv1 = layers.Conv1D(filters=32, kernel_size=125, strides=2,  activation=activation_func, kernel_regularizer=regularizers.l2(reg_const), name='conv1')(wav_input)
     conv1 = layers.Conv1D(filters=64, kernel_size=125, strides=2,  activation=activation_func, kernel_regularizer=regularizers.l2(reg_const), name='conv2')(conv1)
@@ -121,16 +124,12 @@ def build_model(input_shape): # houden
     conv1_new = layers.concatenate(inputs=[conv1_new, graph_features], axis=2)
 
     conv1_new = GCNConv(64, activation='relu', use_bias=False, kernel_regularizer=regularizers.l2(reg_const))([conv1_new, graph_input])
-    conv1_new = layers.Dropout(0.4, seed=seed)(conv1_new) # was 0.3 altijd bij alle experiments
+    # conv1_new = layers.Dropout(0.4, seed=seed)(conv1_new) 
     conv1_new = GCNConv(64, activation='tanh', use_bias=False, kernel_regularizer=regularizers.l2(reg_const))([conv1_new, graph_input])
 
     conv1_new = layers.Flatten()(conv1_new)
     conv1_new = layers.Dropout(0.4, seed=seed)(conv1_new)
 
-    meta_input = layers.Input(shape=(1,), name='meta_input')
-    meta = layers.Dense(1)(meta_input)
-    conv1_new = layers.concatenate(inputs=[conv1_new, meta])
-    # conv1_new = layers.Dropout(0.4, seed=seed)(conv1_new)
     merged = layers.Dense(128)(conv1_new)
 
     pga = layers.Dense(39)(merged)
@@ -141,152 +140,238 @@ def build_model(input_shape): # houden
     
     final_model = models.Model(inputs=[wav_input, meta_input, graph_input, graph_features], outputs=[pga, pgv, sa03, sa10, sa30]) #, pgv, sa03, sa10, sa30
     
-    rmsprop = optimizers.RMSprop(lr=0.0001, rho=0.9, epsilon=None, decay=0.)
+    # rmsprop = optimizers.RMSprop(lr=0.0001, rho=0.9, epsilon=None, decay=0.)
+    rmsprop = optimizers.RMSprop(learning_rate=0.0001, rho=0.9, epsilon=None, decay=0.)
+
     final_model.compile(optimizer=rmsprop, loss='mse')
     
     return final_model
 
 from tensorflow import keras
 
-es = keras.callbacks.EarlyStopping(patience=10, verbose=1, min_delta=0.001, monitor='val_loss', mode='min',baseline=None, restore_best_weights=True)
+es = keras.callbacks.EarlyStopping(patience=10, verbose=0, min_delta=0.001, monitor='val_loss', mode='min',baseline=None, restore_best_weights=True)
 
 import sys
-network_choice = str(sys.argv[1])
+network_choice = sys.argv[1]
 
 #%%
-def main():
 
-    # network_choice = 'network_2'
+if network_choice == 'network_1':
+    test_set_size = 0.2
+    inputs = np.load('data/inputs_ci.npy', allow_pickle = True)
+    targets = np.load('data/targets.npy', allow_pickle = True)
+    meta = np.load('data/meta.npy', allow_pickle = True)
+    
+    minmaxchecker = True
+    if minmaxchecker == True:   
+        graph_input = np.load('data/minmax_normalized_laplacian.npy', allow_pickle=True)
+    else:
+        graph_input = np.load('data/normalized_laplacian.npy', allow_pickle=True)
+    
+    graph_input = np.array([graph_input] * inputs.shape[0])
+
+    graph_features = np.load('data/station_coords.npy', allow_pickle=True)
+    graph_features = np.array([graph_features] * inputs.shape[0])
+
+if network_choice == 'network_2':
+    test_set_size = 0.2
+    inputs = np.load('data/othernetwork/inputs_cw.npy', allow_pickle = True)
+    targets = np.load('data/othernetwork/targets.npy', allow_pickle = True)
+    meta = np.load('data/othernetwork/meta.npy', allow_pickle = True)
+    
+    minmaxchecker = True
+    if minmaxchecker == True:   
+        graph_input = np.load('data/othernetwork/minmax_normalized_laplacian.npy', allow_pickle=True)
+    else:
+        graph_input = np.load('data/othernetwork/normalized_laplacian.npy', allow_pickle=True)
+    
+    graph_input = np.array([graph_input] * inputs.shape[0])
+
+    graph_features = np.load('data/othernetwork/station_coords.npy', allow_pickle=True)
+    graph_features = np.array([graph_features] * inputs.shape[0])
+
+# random_state_here = random.randrange(0,1000)
+random_state_here = int(sys.argv[2])
+train_inputs, test_inputs, traingraphinput , testgraphinput, train_graphfeature, test_graphfeature, train_targets, testTargets = train_test_split(inputs,graph_input, graph_features, targets, test_size=test_set_size, random_state=random_state_here)
+testInputs, testMaxes = normalize(test_inputs[:, :, :1000, :])        
+
+import math
+print(train_inputs.shape)
+length_size_min = int((train_inputs.shape[0] / 5))
+print(f"size of length_size_min = {length_size_min}")
+print(f"size of length_size_min = {length_size_min}")
+
+length_size_max = int((train_inputs.shape[0]) + -(train_inputs.shape[0] / 5))
+print(f"size of length_size_max = {length_size_max}")
+print(f"size of length_size_max = {length_size_max}")
+
+inputsK, targetsK, metaK = k_fold_split(train_inputs, train_targets, meta)
+
+# mse_scores_pgv = []
+# mse_scores_pga = []
+# mse_scores_psa_03s = []
+# mse_scores_psa_1s = []
+# mse_scores_psa_3s = []
+
+
+mse_list = []
+rmse_list = []
+mae_list = []
+rsquared_list = []
+maxerror_list = []
+euclideanerror_list = []
+mape_list = []
+
+for k in range(0,5):
+    keras.backend.clear_session()
+    tf.keras.backend.clear_session()
+
+    trainInputsAll, trainTargets, trainMeta, valInputsAll, valTargets, testMeta = merge_splits(inputsK, targetsK, metaK, k)
+
+    # train_graphinput = traingraphinput[0:length_size_max,:,:]
+    # train_graphfeatureinput = train_graphfeature[0:length_size_max,:,:]
+
+    # val_graphinput = traingraphinput[0:length_size_min,:,:]
+    # val_graphfeatureinput = train_graphfeature[0:length_size_min,:,:]
+
+    train_graphinput = traingraphinput[0:trainInputsAll.shape[0],:,:]
+    train_graphfeatureinput = train_graphfeature[0:trainInputsAll.shape[0],:,:]
+
+    val_graphinput = traingraphinput[0:valInputsAll.shape[0],:,:]
+    val_graphfeatureinput = train_graphfeature[0:valInputsAll.shape[0],:,:]
 
     if network_choice == 'network_1':
-        
-        inputs = np.load('data/inputs_ci.npy', allow_pickle = True)
-        targets = np.load('data/targets.npy', allow_pickle = True)
-        meta = np.load('data/meta.npy', allow_pickle = True)
-     
-        minmaxchecker = True
-        if minmaxchecker == True:   
-            graph_input = np.load('data/minmax_normalized_laplacian.npy', allow_pickle=True)
-        else:
-            graph_input = np.load('data/normalized_laplacian.npy', allow_pickle=True)
-        
-        graph_input = np.array([graph_input] * inputs.shape[0])
+        trainInputs, trainMaxes = normalize(trainInputsAll[:, :, :1000, :])
+        valInputs, valMaxes = normalize(valInputsAll[:, :, :1000, :])
 
-        graph_features = np.load('data/station_coords.npy', allow_pickle=True)
-        graph_features = np.array([graph_features] * inputs.shape[0])
     if network_choice == 'network_2':
-        inputs = np.load('data/othernetwork/inputs_cw.npy', allow_pickle = True)[0:265]
-        targets = np.load('data/othernetwork/targets.npy', allow_pickle = True)[0:265]
-        meta = np.load('data/othernetwork/meta.npy', allow_pickle = True)[0:265]
+        trainInputs, trainMaxes = normalize(trainInputsAll[:, :, :, :])
+        valInputs, valMaxes = normalize(valInputsAll[:, :, :, :])
 
-        minmaxchecker = True
-        if minmaxchecker == True:   
-            graph_input = np.load('data/othernetwork/minmax_normalized_laplacian.npy', allow_pickle=True)
-        else:
-            graph_input = np.load('data/othernetwork/normalized_laplacian.npy', allow_pickle=True)
-        
-        graph_input = np.array([graph_input] * inputs.shape[0])
+    model = build_model(valInputs[0].shape)
 
-        graph_features = np.load('data/othernetwork/station_coords.npy', allow_pickle=True)
- 
-        print(graph_features[0])
-        graph_features = np.array([graph_features] * inputs.shape[0])
+    iteration_checkpoint = keras.callbacks.ModelCheckpoint(
+        f'models/graph_model_{network_choice}_iteration_{k}.h5',
+        monitor='val_loss',
+        verbose=0,
+        save_best_only=True
+    )
 
-    import math
-    length_size_min = inputs.shape[0] / 5
-    print(f"size of length_size_min = {length_size_min}")
-    length_size_min = math.floor(length_size_min)
-    print(f"size of length_size_min = {length_size_min}")
-
-    length_size_max = inputs.shape[0] -(inputs.shape[0] / 5)
-    print(f"size of length_size_max = {length_size_max}")
-    length_size_max = math.floor(length_size_max)
-    print(f"size of length_size_max = {length_size_max}")
-
-    inputsK, targetsK, metaK = k_fold_split(inputs, targets, meta)
+    # print(model.summary())
     
-    mse_scores_pgv = []
-    mse_scores_pga = []
-    mse_scores_psa_03s = []
-    mse_scores_psa_1s = []
-    mse_scores_psa_3s = []
+    history = model.fit(x=[trainInputs, trainMaxes,train_graphinput,train_graphfeatureinput], 
+                        y=targets_to_list(trainTargets),#trainTargets[:,:,0],
+            epochs=100, batch_size=20,
+            validation_data=([valInputs,valMaxes,val_graphinput,val_graphfeatureinput], targets_to_list(valTargets)),verbose=0,callbacks=[es,iteration_checkpoint])#
     
-    for k in range(0,5):
-        keras.backend.clear_session()
-        tf.keras.backend.clear_session()
 
-        trainInputsAll, trainTargets, trainMeta, testInputsAll, testTargets, testMeta = merge_splits(inputsK, targetsK, metaK, k)
+    print()
+    print('total number of epochs ran = ',len(history.history['loss']))
+    print('Fold number:' + str(k))
+    predictions = model.predict([testInputs, testMaxes,testgraphinput, test_graphfeature])
+    # print('MSE of this fold = ',np.square(np.subtract(predictions[1], testTargets[:,:,1])).mean())
+
+    new_predictions = np.array(predictions)
+    new_predictions = np.swapaxes(new_predictions,0,2)
+    new_predictions = np.swapaxes(new_predictions,0,1)
     
-        train_graphinput = graph_input[0:length_size_max,:,:]
-        train_graphfeatureinput = graph_features[0:length_size_max,:,:]
+    np.save(f'saved_results/gcn_{network_choice}_iteration_{k}_targets.npy',testTargets)
+    np.save(f'saved_results/gcn_{network_choice}_iteration_{k}_predictions.npy',new_predictions)
 
-        test_graphinput = graph_input[0:length_size_min,:,:]
-        test_graphfeatureinput = graph_features[0:length_size_min,:,:]
 
-        if network_choice == 'network_1':
-            trainInputs, trainMaxes = normalize(trainInputsAll[:, :, :1000, :])
-            testInputs, testMaxes = normalize(testInputsAll[:, :, :1000, :])
+    from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score,max_error,mean_absolute_percentage_error
+    MSE = []
+    for i in range(0,5):
+        MSE.append(mean_squared_error(testTargets[:,:,i], new_predictions[:,:,i]))
+    print('mse = ',np.array(MSE).mean())
+    MSE = np.array(MSE).mean()
     
-        if network_choice == 'network_2':
-            trainInputs, trainMaxes = normalize(trainInputsAll[:, :, :, :])
-            testInputs, testMaxes = normalize(testInputsAll[:, :, :, :])
+    RMSE = []
+    for i in range(0,5):
+        RMSE.append(mean_squared_error(testTargets[:,:,i], new_predictions[:,:,i], squared=False))
+    print('rmse = ',np.array(RMSE).mean())
+    RMSE = np.array(RMSE).mean()
+    
+    MAE = []
+    for i in range(0,5):
+        MAE.append(mean_absolute_error(testTargets[:,:,i], new_predictions[:,:,i]))
+    print('MAE = ',np.array(MAE).mean())
+    MAE = np.array(MAE).mean()
+    
+    RSQUARED = []
+    for i in range(0,5):
+        RSQUARED.append(r2_score(testTargets[:,:,i], new_predictions[:,:,i]))
+    print('RSQUARED = ',np.array(RSQUARED).mean())
+    RSQUARED = np.array(RSQUARED).mean()
 
-        model = build_model(testInputs[0].shape)
-
-        iteration_checkpoint = keras.callbacks.ModelCheckpoint(
-            f'models/graph_model_{network_choice}_iteration_{k}.h5',
-            monitor='val_loss',
-            verbose=1,
-            save_best_only=True
-        )
-
-        print(model.summary())
-        history = model.fit(x=[trainInputs, trainMaxes, train_graphinput,train_graphfeatureinput], 
-                            y=targets_to_list(trainTargets),#trainTargets[:,:,0],
-              epochs=100, batch_size=30,
-            #   epochs=30, batch_size=5,
-              validation_data=([testInputs, testMaxes,test_graphinput,test_graphfeatureinput], targets_to_list(testTargets)),verbose=0,callbacks=[es,iteration_checkpoint])#
-       
-        new_weights = np.array(model.get_weights()[0])
-        print()
-        print(f"total parameters in this model: {model.count_params():,.2f}")
-        print('total number of epochs ran = ',len(history.history['loss']))
-        print('Fold number:' + str(k))
-        print('Loss: ',history.history['loss'][-1])
-        print('val_loss: ',history.history['val_loss'][-1])
-
-        predictions = model.predict([testInputs, testMaxes, test_graphinput, test_graphfeatureinput])
-        print(f"The shape of the predictions = {np.array(predictions).shape}")
-        
-#         np.save(f'data/gcn_testtargets_{network_choice}.npy', testTargets)
-#         np.save(f'data/gcn_predictions_{network_choice}.npy', predictions)
-#         np.save(f'data/boxplots/gcn_predictions_{network_choice}_{k}.npy', predictions)
-#         np.save(f'data/boxplots/gcn_testtargets_{network_choice}_{k}.npy', testTargets)
-#         np.save(f'data/gcn_testmeta_{network_choice}.npy', testMeta)
-
-        print('MSE of this fold = ',np.square(np.subtract(predictions[1], testTargets[:,:,1])).mean())
-
-        mse_scores_pga.append(np.round(np.square(np.subtract(np.array(predictions)[0,:,:], testTargets[:,:,0])).mean(), 4))
-        mse_scores_pgv.append(np.round(np.square(np.subtract(predictions[1], testTargets[:,:,1])).mean(), 4))
-
-        mse_scores_psa_03s.append(np.round(np.square(np.subtract(predictions[2], testTargets[:,:,2])).mean(), 4))
-        mse_scores_psa_1s.append(np.round(np.square(np.subtract(predictions[3], testTargets[:,:,3])).mean(), 4))
-        mse_scores_psa_3s.append(np.round(np.square(np.subtract(predictions[4], testTargets[:,:,4])).mean(), 4))
-        
-        keras.backend.clear_session()
-        tf.keras.backend.clear_session()
-
-    mean_pgv = np.array(mse_scores_pgv).mean()
-    mean_pga = np.array(mse_scores_pga).mean()
-    mean_psa_03s = np.array(mse_scores_psa_03s).mean()
-    mean_psa_1s = np.array(mse_scores_psa_1s).mean()
-    mean_psa_3s = np.array(mse_scores_psa_3s).mean()
+    MAPE = []
+    for i in range(0,5):
+        MAPE.append(mean_absolute_percentage_error(testTargets[:,:,i], new_predictions[:,:,i]))
+    MAPE = np.array(MAPE).mean()
 
 
-    all_scores = str(np.array([mean_pgv,mean_pga,mean_psa_03s,mean_psa_1s,mean_psa_3s]).mean())
+    MAX_ERROR = []
+    for i in range(0,5):
+        MAX_ERROR.append(max_error(testTargets[:,:,i].flatten(), new_predictions[:,:,i].flatten()))
+    MAX_ERROR = np.array(MAX_ERROR).mean()
 
-    with open("mse_results.csv", "a") as text_file:
-        print(print_time() + ',' +'Graph'+ ',' + network_choice + ',' + str(mean_pgv) + ',' + str(mean_pga) + ',' + str(mean_psa_03s) + ',' + str(mean_psa_1s) + ',' + str(mean_psa_3s)  + ',' + str(all_scores) , file=text_file)
 
-if __name__== "__main__" :
-    main()
+    def dist(x,y):   
+        return np.sqrt(np.sum((x-y)**2))
+
+    EUCLIDEAN = []
+    for i in range(0,5):
+        EUCLIDEAN.append(dist(testTargets[:,:,i], new_predictions[:,:,i]))
+    print('euclidean = ',np.array(EUCLIDEAN).mean())
+    EUCLIDEAN = np.array(EUCLIDEAN).mean()
+
+    mse_list.append(MSE)
+    rmse_list.append(RMSE)
+    mae_list.append(MAE)
+    rsquared_list.append(RSQUARED)
+
+    maxerror_list.append(MAX_ERROR)
+    euclideanerror_list.append(EUCLIDEAN)
+    mape_list.append(MAPE)
+
+
+    keras.backend.clear_session()
+    tf.keras.backend.clear_session()
+
+print('-')
+print('-')
+print('-')
+print('-')
+print('all averages = ')
+print('mse score = ',np.array(mse_list).mean())
+print('rmse score = ',np.array(rmse_list).mean())
+print('mae score = ',np.array(mae_list).mean())
+print('rsquared score = ',np.array(rsquared_list).mean())
+print('max error score = ',np.array(maxerror_list).mean())
+print('mape error score = ',np.array(mape_list).mean())
+
+
+print('euclidean score = ',np.array(euclideanerror_list).mean())
+
+#%%
+print(np.array(mse_list).shape)
+print(np.array(rmse_list).shape)
+print(np.array(mae_list).shape)
+print(np.array(rsquared_list).shape)
+print(np.array(maxerror_list).shape)
+print(np.array(mape_list).shape)
+print(np.array(euclideanerror_list).shape)
+
+#%%
+
+
+# with open("new_all_results.csv", "a") as text_file:
+#         print(f'{print_time()},{sys.argv[0]},PGV,{network_choice},{mse_list[0]},{rmse_list[0]},{mae_list[0]},{rsquared_list[0]},{maxerror_list[0]},{euclideanerror_list[0]},{mape_list[0]},{random_state_here}', file=text_file)
+#         print(f'{print_time()},{sys.argv[0]},PGA,{network_choice},{mse_list[1]},{rmse_list[1]},{mae_list[1]},{rsquared_list[1]},{maxerror_list[1]},{euclideanerror_list[1]},{mape_list[1]},{random_state_here}', file=text_file)
+#         print(f'{print_time()},{sys.argv[0]},PSA03,{network_choice},{mse_list[2]},{rmse_list[2]},{mae_list[2]},{rsquared_list[2]},{maxerror_list[2]},{euclideanerror_list[2]},{mape_list[2]},{random_state_here}', file=text_file)
+#         print(f'{print_time()},{sys.argv[0]},PSA1,{network_choice},{mse_list[3]},{rmse_list[3]},{mae_list[3]},{rsquared_list[3]},{maxerror_list[3]},{euclideanerror_list[3]},{mape_list[3]},{random_state_here}', file=text_file)
+#         print(f'{print_time()},{sys.argv[0]},PSA3,{network_choice},{mse_list[4]},{rmse_list[4]},{mae_list[4]},{rsquared_list[4]},{maxerror_list[4]},{euclideanerror_list[4]},{mape_list[4]},{random_state_here}', file=text_file)
+
+
+
+
