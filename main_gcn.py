@@ -19,6 +19,17 @@ from tensorflow.keras.layers import *
 from spektral.utils import gcn_filter
 from sklearn.model_selection import train_test_split
 import datetime
+from spektral.layers import GlobalAvgPool, GlobalMaxPool
+
+import sys 
+
+network_choice = sys.argv[1]
+model_chosen = sys.argv[2]
+random_state_here = int(sys.argv[3])
+
+print('model = ',model_chosen)
+print('network = ',network_choice)
+print('random state = ',random_state_here)
 
 seed = 1
 def print_time():
@@ -35,7 +46,6 @@ def normalize(inputs): # Houden
             normalized.append(eq/maks)
         else:
             normalized.append(eq)
-#    maxes = np.reshape(np.array(maxes), (len(maxes), 1))
     return np.array(normalized), np.array(maxes)        
 
 
@@ -121,13 +131,18 @@ def build_model(input_shape): # houden
     conv1 = layers.Conv1D(filters=64, kernel_size=125, strides=2,  activation=activation_func, kernel_regularizer=regularizers.l2(reg_const), name='conv2')(conv1)
 
     conv1_new = tf.keras.layers.Reshape((39,conv1.shape[2] * conv1.shape[3]))(conv1)    
-    conv1_new = layers.concatenate(inputs=[conv1_new, graph_features], axis=2)
+    if model_chosen == 'nofeatures':
+        print('went for no features version')
+    else:
+        print('went for features version')
+        conv1_new = layers.concatenate(inputs=[conv1_new, graph_features], axis=2)
 
     conv1_new = GCNConv(64, activation='relu', use_bias=False, kernel_regularizer=regularizers.l2(reg_const))([conv1_new, graph_input])
-    # conv1_new = layers.Dropout(0.4, seed=seed)(conv1_new) 
     conv1_new = GCNConv(64, activation='tanh', use_bias=False, kernel_regularizer=regularizers.l2(reg_const))([conv1_new, graph_input])
 
-    conv1_new = layers.Flatten()(conv1_new)
+    if model_chosen == 'main':
+        print('went for main version')
+        conv1_new = layers.Flatten()(conv1_new)
     conv1_new = layers.Dropout(0.4, seed=seed)(conv1_new)
 
     merged = layers.Dense(128)(conv1_new)
@@ -139,10 +154,7 @@ def build_model(input_shape): # houden
     sa30 = layers.Dense(39)(merged)
     
     final_model = models.Model(inputs=[wav_input, meta_input, graph_input, graph_features], outputs=[pga, pgv, sa03, sa10, sa30]) #, pgv, sa03, sa10, sa30
-    
-    # rmsprop = optimizers.RMSprop(lr=0.0001, rho=0.9, epsilon=None, decay=0.)
     rmsprop = optimizers.RMSprop(learning_rate=0.0001, rho=0.9, epsilon=None, decay=0.)
-
     final_model.compile(optimizer=rmsprop, loss='mse')
     
     return final_model
@@ -152,58 +164,46 @@ from tensorflow import keras
 es = keras.callbacks.EarlyStopping(patience=10, verbose=0, min_delta=0.001, monitor='val_loss', mode='min',baseline=None, restore_best_weights=True)
 
 import sys
-network_choice = sys.argv[1]
 
 #%%
 
-if network_choice == 'network_1':
+if network_choice == 'network1':
     test_set_size = 0.2
     inputs = np.load('data/inputs_ci.npy', allow_pickle = True)
     targets = np.load('data/targets.npy', allow_pickle = True)
     meta = np.load('data/meta.npy', allow_pickle = True)
     
-    minmaxchecker = True
-    if minmaxchecker == True:   
-        graph_input = np.load('data/minmax_normalized_laplacian.npy', allow_pickle=True)
-    else:
-        graph_input = np.load('data/normalized_laplacian.npy', allow_pickle=True)
-    
+    graph_input = np.load('data/minmax_normalized_laplacian.npy', allow_pickle=True)
     graph_input = np.array([graph_input] * inputs.shape[0])
 
     graph_features = np.load('data/station_coords.npy', allow_pickle=True)
     graph_features = np.array([graph_features] * inputs.shape[0])
 
-if network_choice == 'network_2':
+if network_choice == 'network2':
     test_set_size = 0.2
     inputs = np.load('data/othernetwork/inputs_cw.npy', allow_pickle = True)
     targets = np.load('data/othernetwork/targets.npy', allow_pickle = True)
     meta = np.load('data/othernetwork/meta.npy', allow_pickle = True)
     
-    minmaxchecker = True
-    if minmaxchecker == True:   
-        graph_input = np.load('data/othernetwork/minmax_normalized_laplacian.npy', allow_pickle=True)
-    else:
-        graph_input = np.load('data/othernetwork/normalized_laplacian.npy', allow_pickle=True)
+    graph_input = np.load('data/othernetwork/minmax_normalized_laplacian.npy', allow_pickle=True)
     
     graph_input = np.array([graph_input] * inputs.shape[0])
 
     graph_features = np.load('data/othernetwork/station_coords.npy', allow_pickle=True)
     graph_features = np.array([graph_features] * inputs.shape[0])
 
-# random_state_here = random.randrange(0,1000)
-random_state_here = int(sys.argv[2])
 train_inputs, test_inputs, traingraphinput , testgraphinput, train_graphfeature, test_graphfeature, train_targets, testTargets = train_test_split(inputs,graph_input, graph_features, targets, test_size=test_set_size, random_state=random_state_here)
 testInputs, testMaxes = normalize(test_inputs[:, :, :1000, :])        
 
 import math
-print(train_inputs.shape)
-length_size_min = int((train_inputs.shape[0] / 5))
-print(f"size of length_size_min = {length_size_min}")
-print(f"size of length_size_min = {length_size_min}")
+# print(train_inputs.shape)
+# length_size_min = int((train_inputs.shape[0] / 5))
+# print(f"size of length_size_min = {length_size_min}")
+# print(f"size of length_size_min = {length_size_min}")
 
-length_size_max = int((train_inputs.shape[0]) + -(train_inputs.shape[0] / 5))
-print(f"size of length_size_max = {length_size_max}")
-print(f"size of length_size_max = {length_size_max}")
+# length_size_max = int((train_inputs.shape[0]) + -(train_inputs.shape[0] / 5))
+# print(f"size of length_size_max = {length_size_max}")
+# print(f"size of length_size_max = {length_size_max}")
 
 inputsK, targetsK, metaK = k_fold_split(train_inputs, train_targets, meta)
 
@@ -240,11 +240,11 @@ for k in range(0,5):
     val_graphinput = traingraphinput[0:valInputsAll.shape[0],:,:]
     val_graphfeatureinput = train_graphfeature[0:valInputsAll.shape[0],:,:]
 
-    if network_choice == 'network_1':
+    if network_choice == 'network1':
         trainInputs, trainMaxes = normalize(trainInputsAll[:, :, :1000, :])
         valInputs, valMaxes = normalize(valInputsAll[:, :, :1000, :])
 
-    if network_choice == 'network_2':
+    if network_choice == 'network2':
         trainInputs, trainMaxes = normalize(trainInputsAll[:, :, :, :])
         valInputs, valMaxes = normalize(valInputsAll[:, :, :, :])
 
@@ -257,28 +257,22 @@ for k in range(0,5):
         save_best_only=True
     )
 
-    # print(model.summary())
+    print(model.summary())
     
     history = model.fit(x=[trainInputs, trainMaxes,train_graphinput,train_graphfeatureinput], 
-                        y=targets_to_list(trainTargets),#trainTargets[:,:,0],
+                        y=targets_to_list(trainTargets),
             epochs=100, batch_size=20,
             validation_data=([valInputs,valMaxes,val_graphinput,val_graphfeatureinput], targets_to_list(valTargets)),verbose=0,callbacks=[es,iteration_checkpoint])#
     
-
     print()
     print('total number of epochs ran = ',len(history.history['loss']))
     print('Fold number:' + str(k))
     predictions = model.predict([testInputs, testMaxes,testgraphinput, test_graphfeature])
-    # print('MSE of this fold = ',np.square(np.subtract(predictions[1], testTargets[:,:,1])).mean())
 
     new_predictions = np.array(predictions)
     new_predictions = np.swapaxes(new_predictions,0,2)
     new_predictions = np.swapaxes(new_predictions,0,1)
     
-    np.save(f'saved_results/gcn_{network_choice}_iteration_{k}_targets.npy',testTargets)
-    np.save(f'saved_results/gcn_{network_choice}_iteration_{k}_predictions.npy',new_predictions)
-
-
     from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score,max_error,mean_absolute_percentage_error
     MSE = []
     for i in range(0,5):
@@ -365,13 +359,11 @@ print(np.array(euclideanerror_list).shape)
 #%%
 
 
-# with open("new_all_results.csv", "a") as text_file:
-#         print(f'{print_time()},{sys.argv[0]},PGV,{network_choice},{mse_list[0]},{rmse_list[0]},{mae_list[0]},{rsquared_list[0]},{maxerror_list[0]},{euclideanerror_list[0]},{mape_list[0]},{random_state_here}', file=text_file)
-#         print(f'{print_time()},{sys.argv[0]},PGA,{network_choice},{mse_list[1]},{rmse_list[1]},{mae_list[1]},{rsquared_list[1]},{maxerror_list[1]},{euclideanerror_list[1]},{mape_list[1]},{random_state_here}', file=text_file)
-#         print(f'{print_time()},{sys.argv[0]},PSA03,{network_choice},{mse_list[2]},{rmse_list[2]},{mae_list[2]},{rsquared_list[2]},{maxerror_list[2]},{euclideanerror_list[2]},{mape_list[2]},{random_state_here}', file=text_file)
-#         print(f'{print_time()},{sys.argv[0]},PSA1,{network_choice},{mse_list[3]},{rmse_list[3]},{mae_list[3]},{rsquared_list[3]},{maxerror_list[3]},{euclideanerror_list[3]},{mape_list[3]},{random_state_here}', file=text_file)
-#         print(f'{print_time()},{sys.argv[0]},PSA3,{network_choice},{mse_list[4]},{rmse_list[4]},{mae_list[4]},{rsquared_list[4]},{maxerror_list[4]},{euclideanerror_list[4]},{mape_list[4]},{random_state_here}', file=text_file)
+with open("new_all_results.csv", "a") as text_file:
+        print(f'{print_time()},{model_chosen},PGV,{network_choice},{mse_list[0]},{rmse_list[0]},{mae_list[0]},{rsquared_list[0]},{maxerror_list[0]},{euclideanerror_list[0]},{mape_list[0]},{random_state_here}', file=text_file)
+        print(f'{print_time()},{model_chosen},PGA,{network_choice},{mse_list[1]},{rmse_list[1]},{mae_list[1]},{rsquared_list[1]},{maxerror_list[1]},{euclideanerror_list[1]},{mape_list[1]},{random_state_here}', file=text_file)
+        print(f'{print_time()},{model_chosen},PSA03,{network_choice},{mse_list[2]},{rmse_list[2]},{mae_list[2]},{rsquared_list[2]},{maxerror_list[2]},{euclideanerror_list[2]},{mape_list[2]},{random_state_here}', file=text_file)
+        print(f'{print_time()},{model_chosen},PSA1,{network_choice},{mse_list[3]},{rmse_list[3]},{mae_list[3]},{rsquared_list[3]},{maxerror_list[3]},{euclideanerror_list[3]},{mape_list[3]},{random_state_here}', file=text_file)
+        print(f'{print_time()},{model_chosen},PSA3,{network_choice},{mse_list[4]},{rmse_list[4]},{mae_list[4]},{rsquared_list[4]},{maxerror_list[4]},{euclideanerror_list[4]},{mape_list[4]},{random_state_here}', file=text_file)
 
-
-
-
+#%%
