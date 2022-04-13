@@ -18,8 +18,8 @@ Networkx <br />
 
 #### How to run
 
-Run either main_cnn.py or main_gcn.py with the sys argument 'network_1' or 'network_2' in terminal.<br /> 
-However, it could be that you have to run it as: network_1 without the quotation marks!
+Run either main_cnn.py or main_gcn.py with the sys argument 'network1' or 'network2' in terminal.<br /> 
+However, it could be that you have to run it as: network1 without the quotation marks!
 If you want to also see how the graph is generated, graph_maker.py could be run as well. <br /> 
 
 
