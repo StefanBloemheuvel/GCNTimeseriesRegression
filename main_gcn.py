@@ -19,7 +19,6 @@ from tensorflow.keras.layers import *
 from spektral.utils import gcn_filter
 from sklearn.model_selection import train_test_split
 import datetime
-from spektral.layers import GlobalAvgPool, GlobalMaxPool
 
 import sys 
 
