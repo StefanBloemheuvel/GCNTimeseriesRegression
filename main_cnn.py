@@ -15,12 +15,10 @@ from tensorflow.keras import regularizers
 from tensorflow.keras import optimizers
 from tensorflow.keras import initializers
 
-from spektral.layers import GCNConv
 from tensorflow.keras.layers import *
-from spektral.utils import gcn_filter
 from sklearn.model_selection import train_test_split
 import datetime
-from spektral.layers import GlobalAvgPool, GlobalMaxPool
+
 
 import sys 
 network_choice = sys.argv[1]
@@ -208,7 +206,7 @@ for k in range(0,5):
 
     print(model.summary())
     history = model.fit(x=[trainInputs, train_graphfeatureinput], 
-                        y=targets_to_list(trainTargets),#trainTargets[:,:,0],
+                        y=targets_to_list(trainTargets),
             epochs=100, batch_size=20,
             validation_data=([valInputs,val_graphfeatureinput], targets_to_list(valTargets)),verbose=0, callbacks=[es,iteration_checkpoint])#
     
