@@ -1,4 +1,4 @@
-## Code for the paper: Multivariate Time Series Regression with Graph Neural Networks
+## Code for the paper: Graph Neural Networks for Multivariate Time Series Regression with Application to Seismic Data
 
 ### Authors: Stefan Bloemheuvel, Jurgen van den Hoogen, Dario Jozinovic, Alberto Michelini and Martin Atzmueller
 
