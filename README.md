@@ -27,4 +27,4 @@ If you want to also see how the graph is generated, graph_maker.py could be run 
     <img src="./only_gnnblock.png">
  </p>
 
-
+<img src="./only_gnnblock.png" width="100" height="100">
