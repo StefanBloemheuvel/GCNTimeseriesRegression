@@ -261,13 +261,10 @@ print('mse score = ',np.array(mse_list).mean())
 print('rmse score = ',np.array(rmse_list).mean())
 print('mae score = ',np.array(mae_list).mean())
 
-#%%
 with open("githubresults.csv", "a") as text_file:
-        print(f'{print_time()},{sys.argv[0]},PGV,{network_choice},{mse_list[0]},{rmse_list[0]},{mae_list[0]},{random_state_here}', file=text_file)
-        print(f'{print_time()},{sys.argv[0]},PGA,{network_choice},{mse_list[1]},{rmse_list[1]},{mae_list[1]},{random_state_here}', file=text_file)
-        print(f'{print_time()},{sys.argv[0]},PSA03,{network_choice},{mse_list[2]},{rmse_list[2]},{mae_list[2]},{random_state_here}', file=text_file)
-        print(f'{print_time()},{sys.argv[0]},PSA1,{network_choice},{mse_list[3]},{rmse_list[3]},{mae_list[3]},{random_state_here}', file=text_file)
-        print(f'{print_time()},{sys.argv[0]},PSA3,{network_choice},{mse_list[4]},{rmse_list[4]},{mae_list[4]},{random_state_here}', file=text_file)
+        print(f'{print_time()},{sys.argv[0]},PGV,{network_choice},{model_chosen},{mse_list[0]},{rmse_list[0]},{mae_list[0]},{random_state_here}', file=text_file)
+        print(f'{print_time()},{sys.argv[0]},PGA,{network_choice},{model_chosen},{mse_list[1]},{rmse_list[1]},{mae_list[1]},{random_state_here}', file=text_file)
+        print(f'{print_time()},{sys.argv[0]},PSA03,{network_choice},{model_chosen},{mse_list[2]},{rmse_list[2]},{mae_list[2]},{random_state_here}', file=text_file)
+        print(f'{print_time()},{sys.argv[0]},PSA1,{network_choice},{model_chosen},{mse_list[3]},{rmse_list[3]},{mae_list[3]},{random_state_here}', file=text_file)
+        print(f'{print_time()},{sys.argv[0]},PSA3,{network_choice},{model_chosen},{mse_list[4]},{rmse_list[4]},{mae_list[4]},{random_state_here}', file=text_file)
 
-
-#%%
