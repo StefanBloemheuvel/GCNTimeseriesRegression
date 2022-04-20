@@ -18,7 +18,7 @@ Networkx <br />
 
 #### How to run
 
-Run either main_cnn.py or main_gcn.py with the sys argument 'network1' or 'network2' in terminal, following the with 'nofeatures' or anything else for the main version. Lastly, a number that serves as the random state for the split.<br /> 
+Run either main_cnn.py or main_gcn.py with the sys argument 'network1' or 'network2' in terminal, following the with 'nofeatures' or 'main' for the main version. Lastly, a number that serves as the random state for the split.<br /> 
 
 Example: python main_gcn.py network1 main 1
 However, it could be that you have to run it as: network1 without the quotation marks!
