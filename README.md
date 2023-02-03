@@ -20,7 +20,11 @@ Networkx <br />
 
 Run either main_cnn.py or main_gcn.py with the sys argument 'network1' or 'network2' in terminal, following the with 'nofeatures' or 'main' for the main version. Lastly, a number that serves as the random state for the split.<br /> 
 
-Example: python main_gcn.py network1 main 1  <br /> 
+
+Example:
+```
+python main_gcn.py network1 main 1
+```
 If you want to also see how the graph is generated, graph_maker.py could be run as well. <br /> 
 
 
