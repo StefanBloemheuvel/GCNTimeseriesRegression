@@ -12,9 +12,16 @@ In the data folder, the input_ci.npy file should be placed <br />
 The input_cw.npy file should be placed in data/othernetwork <br /> 
 
 #### Requirements
-Tensorflow <br /> 
-Spektral <br /> 
-Networkx <br /> 
+geopy==2.2.0 <br /> 
+keras==2.8.0 <br /> 
+networkx==2.7.1 <br /> 
+numba==0.56.2 <br /> 
+numpy==1.22.3 <br /> 
+scikit-learn==1.0.2 <br /> 
+scipy==1.8.0 <br /> 
+sklearn==0.0 <br /> 
+spektral==1.1.0 <br /> 
+tensorflow==2.8.0 <br /> 
 
 #### How to run
 
