@@ -38,5 +38,5 @@ If you want to also see how the graph is generated, graph_maker.py could be run 
  </p>
 
   <p align="center">
-    <img src="./procedure.png", width="100" height="100">>
+    <img src="./procedure.png" width="100%" height="100%"
  </p>
