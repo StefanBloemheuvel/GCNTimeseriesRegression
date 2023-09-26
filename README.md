@@ -7,12 +7,12 @@
     <img src="./only_gnnblock.png", height="500">
  </p>
 
-### Data
+## Data
 The data (too big to host on github itself) can be downloaded at: https://zenodo.org/record/5767221  <br /> 
 In the data folder, the input_ci.npy file should be placed <br /> 
 The input_cw.npy file should be placed in data/othernetwork <br /> 
 
-### Requirements
+## Requirements
 geopy==2.2.0 <br /> 
 keras==2.8.0 <br /> 
 networkx==2.7.1 <br /> 
@@ -25,7 +25,6 @@ spektral==1.1.0 <br />
 tensorflow==2.8.0 <br /> 
 
 ## How to run
-
 Run either main_cnn.py or main_gcn.py with the sys argument 'network1' or 'network2' in terminal, following the with 'nofeatures' or 'main' for the main version. Lastly, a number that serves as the random state for the split.<br /> 
 
 
