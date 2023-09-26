@@ -37,7 +37,7 @@ $ python main_gcn.py network1 main 1
 
 Here, 'network1' refers to the CI network, 'main' refers to running the main experiment and '1' refers to a seed which can be used.
 
-
+![The proposed framework](procedure.png)
   <p align="center">
     <img src="./procedure.png" width="100%" height="100%"
  </p>
