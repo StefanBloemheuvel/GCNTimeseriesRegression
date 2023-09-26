@@ -40,8 +40,8 @@ Here, 'network1' refers to the CI network, 'main' refers to running the main exp
  </p>
 
 ## Results
-| Type        | Method                           | PGA| PGA| PGA| PGV MAE | PGV MSE | PGV RMSE | PSA03 MAE | PSA03 MSE | PSA03 RMSE | PSA1 MAE | PSA1 MSE | PSA1 RMSE | PSA3 MAE | PSA3 MSE | PSA3 RMSE |
-|-------------|----------------------------------|MAE |MSE |RMSE|---------|---------|----------|-----------|-----------|------------|---------|---------|----------|---------|---------|----------|
+| Type        | Method                           | PGA MAE | PGA MSE | PGA RMSE | PGV MAE | PGV MSE | PGV RMSE | PSA03 MAE | PSA03 MSE | PSA03 RMSE | PSA1 MAE | PSA1 MSE | PSA1 RMSE | PSA3 MAE | PSA3 MSE | PSA3 RMSE |
+|-------------|----------------------------------|---------|---------|---------|---------|---------|----------|-----------|-----------|------------|---------|---------|----------|---------|---------|----------|
 | **CI Network** |                                  |         |         |          |         |         |          |           |           |            |         |         |          |         |         |          |
 | SVM         |                                  | 0.43    | 0.36    | 0.60     | 0.47    | 0.43    | 0.65     | 0.47      | 0.41      | 0.64       | 0.44    | 0.37    | 0.61     | 0.45    | 0.40    | 0.63     |
 | KNN         |                                  | 0.41    | 0.32    | 0.56     | 0.44    | 0.37    | 0.61     | 0.45      | 0.37      | 0.61       | 0.43    | 0.35    | 0.59     | 0.44    | 0.38    | 0.62     |
