@@ -13,16 +13,16 @@ In the data folder, the input_ci.npy file should be placed <br />
 The input_cw.npy file should be placed in data/othernetwork <br /> 
 
 ## Requirements
-geopy==2.2.0 <br /> 
-keras==2.8.0 <br /> 
-networkx==2.7.1 <br /> 
-numba==0.56.2 <br /> 
-numpy==1.22.3 <br /> 
-scikit-learn==1.0.2 <br /> 
-scipy==1.8.0 <br /> 
-sklearn==0.0 <br /> 
-spektral==1.1.0 <br /> 
-tensorflow==2.8.0 <br /> 
+* geopy==2.2.0 
+* keras==2.8.0
+* networkx==2.7.1 
+* numba==0.56.2 
+* numpy==1.22.3
+* scikit-learn==1.0.2
+* scipy==1.8.0
+* sklearn==0.0
+* spektral==1.1.0 
+* tensorflow==2.8.0
 
 ## How to run
 Run either main_cnn.py or main_gcn.py with the sys argument 'network1' or 'network2' in terminal, following the with 'nofeatures' or 'main' for the main version. Lastly, a number that serves as the random state for the split.<br /> 
