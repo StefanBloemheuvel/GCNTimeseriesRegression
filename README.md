@@ -7,6 +7,7 @@
     <img src="./only_gnnblock.png", height="500">
  </p>
 
+![The proposed framework](only_gnnblock.png)
 ### Data
 The data (too big to host on github itself) can be downloaded at: https://zenodo.org/record/5767221  <br /> 
 In the data folder, the input_ci.npy file should be placed <br /> 
@@ -40,3 +41,17 @@ Here, 'network1' refers to the CI network, 'main' refers to running the main exp
   <p align="center">
     <img src="./procedure.png" width="100%" height="100%"
  </p>
+
+## Cite
+
+If you compare with, build on, or use aspects of this work, please cite the following:
+```
+@article{bloemheuvel2022graph,
+  title={Graph neural networks for multivariate time series regression with application to seismic data},
+  author={Bloemheuvel, Stefan and van den Hoogen, Jurgen and Jozinovic, Dario and Michelini, Alberto and Atzmueller, Martin},
+  journal={International Journal of Data Science and Analytics},
+  pages={1--16},
+  year={2022},
+  publisher={Springer}
+}
+```
