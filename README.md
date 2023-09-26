@@ -24,7 +24,7 @@ sklearn==0.0 <br />
 spektral==1.1.0 <br /> 
 tensorflow==2.8.0 <br /> 
 
-### How to run
+## How to run
 
 Run either main_cnn.py or main_gcn.py with the sys argument 'network1' or 'network2' in terminal, following the with 'nofeatures' or 'main' for the main version. Lastly, a number that serves as the random state for the split.<br /> 
 
