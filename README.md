@@ -40,10 +40,9 @@ Here, 'network1' refers to the CI network, 'main' refers to running the main exp
  </p>
 
 ## Results (in MSE)
+### CI Network
 | **Type**          | **PGA** | **PGV** | **PSA03** | **PSA1** | **PSA3** |
 |-------------------|--------:|--------:|----------:|---------:|---------:|
-|                   |         |         |           |          |          |
-| **CI Network**    |         |         |           |          |          |
 | SVM               |    0.36 |    0.43 |      0.41 |     0.37 |     0.40 |
 | KNN               |    0.32 |    0.37 |      0.37 |     0.35 |     0.38 |
 | XGBoost           |    0.28 |    0.32 |      0.33 |     0.31 |     0.33 |
@@ -52,8 +51,10 @@ Here, 'network1' refers to the CI network, 'main' refers to running the main exp
 | Jozinovic et al.  |    0.22 |    0.26 |      0.24 |     0.26 |     0.25 |
 | Kim et al.        |    0.26 |    0.23 |      0.23 |     0.24 |     0.24 |
 | **TISER-GCN**     | **0.20**| **0.21**|  **0.19** | **0.20** | **0.21** |
-|                   |         |         |           |          |          |
-| **CW Network**    |         |         |           |          |          |
+
+### CW Network
+| **Type**          | **PGA** | **PGV** | **PSA03** | **PSA1** | **PSA3** |
+|-------------------|--------:|--------:|----------:|---------:|---------:|
 | GAT               |    0.49 |    0.52 |      0.52 |     0.49 |     0.56 |
 | SVM               |    0.43 |    0.51 |      0.58 |     0.51 |     0.40 |
 | KNN               |    0.45 |    0.51 |      0.60 |     0.53 |     0.41 |
